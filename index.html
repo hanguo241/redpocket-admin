@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RedPacket 管理后台</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; }
+  .sidebar-active { background: rgba(255,77,79,0.15); color: #FF4D4F; border-right: 3px solid #FF4D4F; }
+  .card { background: #1a1a2e; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; }
+  input, select { background: #0D0D0D; border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px; padding: 8px 12px; }
+  input:focus, select:focus { outline: none; border-color: #FF4D4F; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 12px 16px; color: #94A3B8; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; }
+  .btn { padding: 8px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; border: none; transition: all .2s; }
+  .btn-primary { background: #FF4D4F; color: white; }
+  .btn-primary:hover { background: #D9363E; }
+  .btn-ghost { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #94A3B8; }
+  .btn-ghost:hover { border-color: #FF4D4F; color: white; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+</style>
+</head>
+<body class="bg-[#0D0D0D] text-white min-h-screen">
+
+<div id="app" class="flex h-screen">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="w-60 bg-[#0D0D0D] border-r border-white/5 p-4 flex flex-col hidden">
+    <div class="text-lg font-bold mb-8 px-3" style="color:#FF4D4F">🧧 RedPacket</div>
+    <nav class="flex-1 space-y-1">
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[#94A3B8] hover:text-white cursor-pointer" onclick="navigate('dashboard')">📊 仪表盘</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[#94A3B8] hover:text-white cursor-pointer" onclick="navigate('projects')">👥 项目方</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[#94A3B8] hover:text-white cursor-pointer" onclick="navigate('packets')">🧧 红包</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[#94A3B8] hover:text-white cursor-pointer" onclick="navigate('claims')">📝 领取记录</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[#94A3B8] hover:text-white cursor-pointer" onclick="navigate('chains')">⛓️ 链配置</a>
+      <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[#94A3B8] hover:text-white cursor-pointer" onclick="navigate('settings')">⚙️ 设置</a>
+    </nav>
+    <div class="border-t border-white/5 pt-4">
+      <div class="text-xs text-[#94A3B8] px-3 mb-1" id="adminInfo"></div>
+      <button class="text-xs text-[#94A3B8] hover:text-red-500 px-3 cursor-pointer" onclick="logout()">退出登录</button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 overflow-auto p-8" id="mainContent">
+    <div id="loadingPage" class="flex items-center justify-center h-full">
+      <div class="text-center">
+        <div class="text-4xl mb-4">⏳</div>
+        <div class="text-[#94A3B8]">加载中...</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Login Page -->
+<div id="loginPage" class="flex items-center justify-center min-h-screen bg-[#0D0D0D]">
+  <div class="card p-8 w-96">
+    <div class="text-center mb-8">
+      <div class="text-4xl mb-2">🧧</div>
+      <h1 class="text-xl font-bold">管理后台</h1>
+      <p class="text-sm text-[#94A3B8] mt-1">RedPacket Admin</p>
+    </div>
+    <div class="space-y-4">
+      <input type="email" id="loginEmail" placeholder="邮箱" class="w-full" value="admin@redpacket.com">
+      <input type="password" id="loginPassword" placeholder="密码" class="w-full" value="admin123">
+      <button class="btn btn-primary w-full" onclick="handleLogin()">登录</button>
+      <p id="loginError" class="text-red-500 text-xs text-center hidden"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = localStorage.getItem('api_url') || 'http://localhost:8080';
+let TOKEN = localStorage.getItem('admin_token');
+let currentPage = 'dashboard';
+
+// ========== 工具 ==========
+async function api(path, opts = {}) {
+  const res = await fetch(`${API}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...(TOKEN ? { 'Authorization': `Bearer ${TOKEN}` } : {}), ...opts.headers },
+    ...opts,
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || res.statusText); }
+  return res.json();
+}
+function $(id) { return document.getElementById(id); }
+function show(el) { if (typeof el === 'string') el = $(el); if (el) el.classList.remove('hidden'); }
+function hide(el) { if (typeof el === 'string') el = $(el); if (el) el.classList.add('hidden'); }
+
+// ========== 登录 ==========
+async function handleLogin() {
+  const email = $('loginEmail').value, password = $('loginPassword').value;
+  try {
+    const res = await api('/api/v1/admin/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+    TOKEN = res.token;
+    localStorage.setItem('admin_token', TOKEN);
+    initApp();
+  } catch (e) {
+    $('loginError').textContent = e.message;
+    show('loginError');
+  }
+}
+
+// ========== 初始化 ==========
+function initApp() {
+  hide('loginPage');
+  show('sidebar');
+  $('adminInfo').textContent = '管理员';
+  navigate('dashboard');
+}
+
+function logout() {
+  TOKEN = null; localStorage.removeItem('admin_token');
+  hide('sidebar'); $('mainContent').innerHTML = '';
+  show('loginPage');
+}
+
+// ========== 导航 ==========
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.remove('sidebar-active'));
+  const idx = ['dashboard','projects','packets','claims','chains','settings'].indexOf(page);
+  if (idx >= 0) document.querySelectorAll('#sidebar nav a')[idx].classList.add('sidebar-active');
+  const pages = { dashboard: renderDashboard, projects: renderProjects, packets: renderPackets, claims: renderClaims, chains: renderChains, settings: renderSettings };
+  (pages[page] || renderDashboard)();
+}
+
+// ========== Dashboard ==========
+async function renderDashboard() {
+  $('mainContent').innerHTML = '<div class="text-center py-20 text-[#94A3B8]">加载中...</div>';
+  try {
+    const d = await api('/api/v1/admin/dashboard');
+    $('mainContent').innerHTML = `
+      <h2 class="text-2xl font-bold mb-6">📊 仪表盘</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        ${[
+          ['🧧', '总红包', d.total_packets],
+          ['💰', '总发放 (wei)', (+d.total_claimed_amount).toLocaleString()],
+          ['👥', '项目方', d.total_projects],
+          ['📝', '领取次数', d.total_claims],
+        ].map(([icon, label, val]) => `<div class="card p-6"><div class="text-2xl mb-2">${icon}</div><div class="text-2xl font-bold">${val}</div><div class="text-sm text-[#94A3B8]">${label}</div></div>`).join('')}
+      </div>
+      <div class="card p-6">
+        <h3 class="font-semibold mb-4">最近红包</h3>
+        <div id="recentPackets"><div class="text-sm text-[#94A3B8]">加载中...</div></div>
+      </div>`;
+    try {
+      const pkts = await api('/api/v1/admin/packets');
+      $('recentPackets').innerHTML = `<table><tr><th>ID</th><th>链</th><th>金额</th><th>状态</th><th>时间</th></tr>
+        ${pkts.packets.slice(0, 10).map(p => `<tr>
+          <td class="font-mono text-xs">${p.id.slice(0,8)}...</td>
+          <td>${p.chain}</td><td>${(+p.total_amount/1e18).toFixed(4)}</td>
+          <td><span class="badge ${p.status==='active'?'bg-green-500/10 text-green-500':'bg-gray-500/10 text-gray-400'}">${p.status}</span></td>
+          <td class="text-xs text-[#94A3B8]">${new Date(p.created_at).toLocaleString()}</td>
+        </tr>`).join('')}</table>`;
+    } catch(e) { $('recentPackets').innerHTML = '<span class="text-red-400">加载失败</span>'; }
+  } catch(e) { $('mainContent').innerHTML = `<div class="text-red-400">加载失败: ${e.message}</div>`; }
+}
+
+// ========== Projects ==========
+async function renderProjects() {
+  $('mainContent').innerHTML = '<div class="text-center py-20 text-[#94A3B8]">加载中...</div>';
+  try {
+    const d = await api('/api/v1/admin/projects');
+    $('mainContent').innerHTML = `
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">👥 项目方</h2>
+        <button class="btn btn-primary" onclick="showCreateProject()">+ 新建</button>
+      </div>
+      <div class="card p-4">
+        <table><tr><th>ID</th><th>名称</th><th>AppKey</th><th>创建时间</th></tr>
+        ${d.projects.map(p => `<tr>
+          <td class="font-mono text-xs">${p.id.slice(0,8)}...</td>
+          <td>${p.name}</td>
+          <td class="font-mono text-xs">${p.app_key}</td>
+          <td class="text-xs text-[#94A3B8]">${new Date(p.created_at).toLocaleString()}</td>
+        </tr>`).join('') || '<tr><td colspan="4" class="text-center text-[#94A3B8]">暂无数据</td></tr>'}
+        </table>
+      </div>`;
+  } catch(e) { $('mainContent').innerHTML = `<div class="text-red-400">${e.message}</div>`; }
+}
+
+function showCreateProject() {
+  const name = prompt('项目名称:');
+  if (!name) return;
+  api('/api/v1/admin/projects', { method: 'POST', body: JSON.stringify({ name }) })
+    .then(r => { alert(`创建成功!\nAppKey: ${r.app_key}\nSecret: ${r.app_secret}`); renderProjects(); })
+    .catch(e => alert('失败: '+e.message));
+}
+
+// ========== Packets ==========
+async function renderPackets() {
+  $('mainContent').innerHTML = '<div class="text-center py-20 text-[#94A3B8]">加载中...</div>';
+  try {
+    const d = await api('/api/v1/admin/packets');
+    $('mainContent').innerHTML = `
+      <h2 class="text-2xl font-bold mb-6">🧧 红包</h2>
+      <div class="card p-4">
+        <table><tr><th>ID</th><th>链</th><th>创建者</th><th>金额 (ETH)</th><th>状态</th><th>创建时间</th></tr>
+        ${d.packets.map(p => `<tr style="cursor:pointer" onclick="showPacket('${p.id}')">
+          <td class="font-mono text-xs">${p.id.slice(0,8)}...</td>
+          <td>${p.chain}</td>
+          <td class="font-mono text-xs">${p.creator.slice(0,10)}...</td>
+          <td>${(+p.total_amount/1e18).toFixed(4)}</td>
+          <td><span class="badge ${p.status==='active'?'bg-green-500/10 text-green-500':p.status==='pending'?'bg-yellow-500/10 text-yellow-500':'bg-gray-500/10 text-gray-400'}">${p.status}</span></td>
+          <td class="text-xs text-[#94A3B8]">${new Date(p.created_at).toLocaleString()}</td>
+        </tr>`).join('') || '<tr><td colspan="6" class="text-center text-[#94A3B8]">暂无数据</td></tr>'}
+        </table>
+      </div>`;
+  } catch(e) { $('mainContent').innerHTML = `<div class="text-red-400">${e.message}</div>`; }
+}
+
+async function showPacket(id) {
+  try {
+    const d = await api(`/api/v1/admin/packets/${id}`);
+    const p = d.packet;
+    $('mainContent').innerHTML = `
+      <button class="btn btn-ghost mb-4" onclick="navigate('packets')">← 返回</button>
+      <h2 class="text-2xl font-bold mb-6">🧧 红包详情</h2>
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        ${[['链', p.chain], ['合约', p.contract], ['创建者', p.creator], ['Token', p.token],
+           ['金额 (wei)', (+p.total_amount).toLocaleString()], ['状态', p.status],
+           ['人数', p.head_count], ['Gas 模式', p.claim_mode],
+           ['链上 ID', p.onchain_packet_id || '—'],
+           ['过期', new Date(p.end_time*1000).toLocaleString()],
+        ].map(([k,v]) => `<div class="card p-4"><div class="text-xs text-[#94A3B8]">${k}</div><div class="font-mono text-sm mt-1 break-all">${v}</div></div>`).join('')}
+      </div>
+      <h3 class="font-semibold mb-3">领取记录 (${d.claims.length})</h3>
+      <div class="card p-4">
+        <table><tr><th>领取人</th><th>金额</th><th>状态</th><th>TxHash</th><th>时间</th></tr>
+        ${d.claims.map(c => `<tr>
+          <td class="font-mono text-xs">${c.recipient.slice(0,10)}...</td>
+          <td>${(+c.amount/1e18).toFixed(6)}</td>
+          <td><span class="badge ${c.status==='confirmed'?'bg-green-500/10 text-green-500':'bg-yellow-500/10 text-yellow-500'}">${c.status}</span></td>
+          <td class="font-mono text-xs">${(c.tx_hash||'').slice(0,12)}...</td>
+          <td class="text-xs text-[#94A3B8]">${new Date(c.created_at).toLocaleString()}</td>
+        </tr>`).join('') || '<tr><td colspan="5" class="text-center text-[#94A3B8]">暂无领取记录</td></tr>'}
+        </table>
+      </div>`;
+  } catch(e) { alert(e.message); }
+}
+
+// ========== Claims ==========
+async function renderClaims() {
+  $('mainContent').innerHTML = '<div class="text-center py-20 text-[#94A3B8]">加载中...</div>';
+  try {
+    const d = await api('/api/v1/admin/claims');
+    $('mainContent').innerHTML = `
+      <h2 class="text-2xl font-bold mb-6">📝 领取记录</h2>
+      <div class="card p-4">
+        <table><tr><th>红包 ID</th><th>领取人</th><th>金额 (ETH)</th><th>状态</th><th>TxHash</th><th>链</th><th>时间</th></tr>
+        ${d.claims.map(c => `<tr>
+          <td class="font-mono text-xs">${c.packet_id.slice(0,8)}...</td>
+          <td class="font-mono text-xs">${c.recipient.slice(0,10)}...</td>
+          <td>${(+c.amount/1e18).toFixed(6)}</td>
+          <td><span class="badge ${c.status==='confirmed'?'bg-green-500/10 text-green-500':c.status==='pending'?'bg-yellow-500/10 text-yellow-500':'bg-red-500/10 text-red-500'}">${c.status}</span></td>
+          <td class="font-mono text-xs">${(c.tx_hash||'—').slice(0,12)}...</td>
+          <td>${c.chain}</td>
+          <td class="text-xs text-[#94A3B8]">${new Date(c.created_at).toLocaleString()}</td>
+        </tr>`).join('') || '<tr><td colspan="7" class="text-center text-[#94A3B8]">暂无数据</td></tr>'}
+        </table>
+      </div>`;
+  } catch(e) { $('mainContent').innerHTML = `<div class="text-red-400">${e.message}</div>`; }
+}
+
+// ========== Chains ==========
+async function renderChains() {
+  $('mainContent').innerHTML = '<div class="text-center py-20 text-[#94A3B8]">加载中...</div>';
+  try {
+    const d = await api('/api/v1/admin/chains');
+    $('mainContent').innerHTML = `
+      <h2 class="text-2xl font-bold mb-6">⛓️ 链配置</h2>
+      <div class="card p-4">
+        <table><tr><th>链</th><th>Chain ID</th><th>RPC URL</th><th>合约地址</th><th>状态</th><th>操作</th></tr>
+        ${d.chains.map(c => `
+          <tr>
+            <td class="font-semibold">${c.chain}</td>
+            <td>${c.chain_id}</td>
+            <td class="font-mono text-xs max-w-[200px] truncate">${c.rpc_url || '—'}</td>
+            <td class="font-mono text-xs max-w-[150px] truncate">${c.contract_address || '—'}</td>
+            <td><span class="badge ${c.is_active ? 'bg-green-500/10 text-green-500' : 'bg-gray-500/10 text-gray-400'}">${c.is_active ? '启用' : '禁用'}</span></td>
+            <td><button class="text-xs text-blue-400 hover:text-blue-300 cursor-pointer" onclick="editChain('${c.chain}','${c.rpc_url}','${c.contract_address}',${c.is_active})">编辑</button></td>
+          </tr>`).join('')}
+        </table>
+      </div>`;
+  } catch(e) { $('mainContent').innerHTML = `<div class="text-red-400">${e.message}</div>`; }
+}
+
+function editChain(chain, rpc, contract, active) {
+  const nrpc = prompt(`RPC URL (${chain}):`, rpc);
+  if (nrpc === null) return;
+  const ncontract = prompt(`合约地址 (${chain}):`, contract);
+  if (ncontract === null) return;
+  api(`/api/v1/admin/chains/${chain}`, { method: 'PUT', body: JSON.stringify({ rpc_url: nrpc, contract_address: ncontract, is_active: active }) })
+    .then(() => { renderChains(); })
+    .catch(e => alert('失败: '+e.message));
+}
+
+// ========== Settings ==========
+async function renderSettings() {
+  $('mainContent').innerHTML = '<div class="text-center py-20 text-[#94A3B8]">加载中...</div>';
+  try {
+    const d = await api('/api/v1/admin/settings');
+    $('mainContent').innerHTML = `
+      <h2 class="text-2xl font-bold mb-6">⚙️ 平台设置</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        ${[['签名者地址', d.signer_address], ['代领钱包', d.relayer_address],
+           ['默认手续费 (bps)', d.default_fee_bps], ['分享链接域名', d.share_url_host],
+        ].map(([k,v]) => `<div class="card p-6"><div class="text-sm text-[#94A3B8]">${k}</div><div class="font-mono mt-1 break-all">${v}</div></div>`).join('')}
+      </div>`;
+  } catch(e) { $('mainContent').innerHTML = `<div class="text-red-400">${e.message}</div>`; }
+}
+
+// ========== 启动 ==========
+if (TOKEN) { initApp(); }
+</script>
+</body>
+</html>
