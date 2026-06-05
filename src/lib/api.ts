@@ -95,3 +95,15 @@ export function fetchSettings() {
     share_url_host: string;
   }>("/api/v1/admin/settings");
 }
+
+// Gas 配置
+export function fetchGasConfig() {
+  return api<{ config: Record<string, string> }>("/api/v1/admin/gas-config");
+}
+
+export function updateGasConfig(config: Record<string, string>) {
+  return api("/api/v1/admin/gas-config", {
+    method: "PUT",
+    body: JSON.stringify({ config }),
+  });
+}
