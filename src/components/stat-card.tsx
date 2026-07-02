@@ -6,10 +6,16 @@ interface StatCardProps {
 
 export function StatCard({ icon, label, value }: StatCardProps) {
   return (
-    <div className="rounded-xl p-6" style={{ background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.06)" }}>
-      <div className="text-2xl mb-2">{icon}</div>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-sm" style={{ color: "#94A3B8" }}>{label}</div>
+    <div className="bg-white" style={{
+      borderRadius: "8px",
+      padding: "24px",
+      boxShadow: "rgba(0,0,0,0.08) 0px 0px 0px 1px, rgba(0,0,0,0.04) 0px 2px 2px, rgba(0,0,0,0.04) 0px 8px 8px -8px, #fafafa 0px 0px 0px 1px",
+    }}>
+      <div style={{ fontSize: "24px", marginBottom: "8px" }}>{icon}</div>
+      <div style={{ fontSize: "32px", fontWeight: 600, letterSpacing: "-1.28px", lineHeight: 1.25, color: "#171717" }}>
+        {value}
+      </div>
+      <div style={{ fontSize: "14px", color: "#4d4d4d" }}>{label}</div>
     </div>
   );
 }

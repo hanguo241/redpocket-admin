@@ -48,6 +48,7 @@ export function fetchDashboard() {
     total_projects: number;
     active_packets: number;
     total_claims: number;
+    total_platform_fees_wei: string;
   }>("/api/v1/admin/dashboard");
 }
 
@@ -105,5 +106,25 @@ export function updateGasConfig(config: Record<string, string>) {
   return api("/api/v1/admin/gas-config", {
     method: "PUT",
     body: JSON.stringify({ config }),
+  });
+}
+
+// 平台手续费
+export function prepareFeeWithdrawTransaction(data: {
+  chain: string;
+  token: string;
+  to: string;
+  amount: string;
+}) {
+  return api<{
+    transaction: { to: string; data: string; value: string };
+    chain: string;
+    chain_id: number;
+    token: string;
+    amount: string;
+    recipient: string;
+  }>("/api/v1/admin/fees/withdraw-transaction", {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 }

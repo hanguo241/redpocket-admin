@@ -18,10 +18,12 @@ export function Sidebar() {
   const { user, logout } = useAuth();
 
   return (
-    <aside className="w-60 bg-[#0D0D0D] border-r border-white/5 flex flex-col shrink-0">
-      <div className="p-4 border-b border-white/5">
-        <Link href="/dashboard" className="text-lg font-bold" style={{ color: "#FF4D4F" }}>
-          🧧 RedPacket
+    <aside className="w-60 bg-white flex flex-col shrink-0 min-h-screen"
+      style={{ boxShadow: "rgba(0, 0, 0, 0.08) 0px 0px 0px 1px" }}>
+      <div className="p-4" style={{ boxShadow: "rgba(0, 0, 0, 0.08) 0px -1px 0px 0px inset" }}>
+        <Link href="/dashboard" className="flex items-center gap-2"
+          style={{ fontSize: "16px", fontWeight: 600, color: "#171717", letterSpacing: "-0.32px" }}>
+          <span>🧧</span> RedPacket
         </Link>
       </div>
 
@@ -32,12 +34,20 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                active
-                  ? "text-white font-medium"
-                  : "text-[#94A3B8] hover:text-white"
-              }`}
-              style={active ? { background: "rgba(255,77,79,0.15)", color: "#FF4D4F" } : {}}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "8px 12px",
+                borderRadius: "6px",
+                fontSize: "14px",
+                fontWeight: active ? 500 : 400,
+                color: active ? "#171717" : "#666666",
+                background: active ? "#fafafa" : "transparent",
+                transition: "all 0.15s ease",
+                textDecoration: "none",
+              }}
+              className="hover:text-[#171717]"
             >
               {item.label}
             </Link>
@@ -45,11 +55,12 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-white/5">
-        <div className="text-xs text-[#94A3B8] mb-2">{user?.name}</div>
+      <div className="p-4" style={{ boxShadow: "rgba(0, 0, 0, 0.08) 0px -1px 0px 0px" }}>
+        <div style={{ fontSize: "12px", color: "#808080", marginBottom: "8px" }}>{user?.name}</div>
         <button
           onClick={logout}
-          className="text-xs text-[#94A3B8] hover:text-red-500 transition-colors cursor-pointer"
+          className="cursor-pointer transition-colors hover:text-[#171717]"
+          style={{ fontSize: "12px", color: "#808080", border: "none", background: "none", padding: 0 }}
         >
           退出登录
         </button>
