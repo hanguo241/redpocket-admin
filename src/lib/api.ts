@@ -128,3 +128,65 @@ export function prepareFeeWithdrawTransaction(data: {
     body: JSON.stringify(data),
   });
 }
+
+// ── 代币管理 ──
+
+export interface TokenConfig {
+  id: number;
+  chain: string;
+  token_address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  is_native: boolean;
+  token_type: string;
+  logo_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export function fetchTokens(chain?: string) {
+  const params = chain ? `?chain=${encodeURIComponent(chain)}` : "";
+  return api<{ tokens: TokenConfig[] }>(`/api/v1/admin/tokens${params}`);
+}
+
+export function createToken(data: {
+  chain: string;
+  token_address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  is_native?: boolean;
+  token_type: string;
+  logo_url?: string;
+  sort_order?: number;
+}) {
+  return api("/api/v1/admin/tokens", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateToken(
+  id: number,
+  data: {
+    symbol?: string;
+    name?: string;
+    decimals?: number;
+    token_type?: string;
+    logo_url?: string;
+    sort_order?: number;
+    is_active?: boolean;
+  }
+) {
+  return api(`/api/v1/admin/tokens/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteToken(id: number) {
+  return api(`/api/v1/admin/tokens/${id}`, {
+    method: "DELETE",
+  });
+}

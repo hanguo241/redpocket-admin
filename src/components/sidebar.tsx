@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/projects", label: "👥 项目方" },
   { href: "/packets", label: "🧧 红包" },
   { href: "/claims", label: "📝 领取记录" },
+  { href: "/tokens", label: "🪙 代币管理" },
   { href: "/chains", label: "⛓️ 链配置" },
   { href: "/settings", label: "⚙️ 设置" },
 ];
