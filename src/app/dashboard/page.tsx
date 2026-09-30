@@ -32,16 +32,16 @@ export default function DashboardPage() {
 
   const cards = [
     { icon: "🧧", label: "总红包", value: data.total_packets },
-    { icon: "💰", label: "总发放（主单位）", value: formatAmount(data.total_claimed_amount) },
-    { icon: "🏦", label: "平台费（主单位）", value: formatAmount(data.total_platform_fees_wei || "0") },
+    { icon: "💰", label: "总发放（AVAX）", value: formatAmount(data.total_claimed_amount) },
+    { icon: "🏦", label: "平台费（AVAX）", value: formatAmount(data.total_platform_fees_wei || "0") },
     { icon: "👥", label: "项目方", value: data.total_projects },
   ];
 
   const columns = [
     { key: "id", label: "ID", render: (v: string) => <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: "12px" }}>{v.slice(0, 8)}...</span> },
     { key: "chain", label: "链" },
-    { key: "gross_amount", label: "总额（主单位）", render: (v: string) => formatAmount(v) },
-    { key: "platform_fee_wei", label: "平台费（主单位）", render: (v: string) => formatAmount(v) },
+    { key: "gross_amount", label: "总额（AVAX）", render: (v: string) => formatAmount(v) },
+    { key: "platform_fee_wei", label: "平台费（AVAX）", render: (v: string) => formatAmount(v) },
     { key: "status", label: "状态", render: (v: string) => <StatusBadge status={v} /> },
     { key: "created_at", label: "时间", render: (v: string) => <span style={{ fontSize: "12px", color: "#808080" }}>{new Date(v).toLocaleString()}</span> },
   ];
@@ -49,7 +49,6 @@ export default function DashboardPage() {
   return (
     <div>
       <PageHeader title="📊 仪表盘" />
-      <p className="mb-4 text-sm text-gray-500">汇总金额按 18 位精度换算（10¹⁸ wei = 1 AVAX）；当前接口未按币种拆分。</p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {cards.map((c) => <StatCard key={c.label} {...c} />)}
       </div>

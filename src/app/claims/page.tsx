@@ -18,7 +18,7 @@ export default function ClaimsPage() {
   const columns = [
     { key: "packet_id", label: "红包 ID", render: (v: string) => <span className="font-mono text-xs">{v.slice(0, 8)}...</span> },
     { key: "recipient", label: "领取人", render: (v: string) => <span className="font-mono text-xs">{v.slice(0, 10)}...</span> },
-    { key: "amount", label: "金额（主单位）", render: (v: string) => formatAmount(v) },
+    { key: "amount", label: "金额（AVAX）", render: (v: string) => formatAmount(v) },
     { key: "status", label: "状态", render: (v: string) => <StatusBadge status={v} /> },
     { key: "tx_hash", label: "TxHash", render: (v: string) => <span className="font-mono text-xs">{(v || "—").slice(0, 12)}...</span> },
     { key: "chain", label: "链" },
@@ -30,7 +30,6 @@ export default function ClaimsPage() {
   return (
     <div>
       <PageHeader title="📝 领取记录" />
-      <p className="mb-4 text-sm text-gray-500">金额按 18 位精度换算为主单位（10¹⁸ wei = 1 AVAX）。</p>
       <DataTable columns={columns} data={claims} />
     </div>
   );

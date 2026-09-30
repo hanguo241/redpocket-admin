@@ -17,5 +17,5 @@ export function nativeSymbol(chain: string): string {
     "AVAX-FUJI": "AVAX", AVAX: "AVAX", ETH: "ETH", BSC: "BNB",
     LOCAL: "ETH", SEPOLIA: "ETH", POLYGON: "POL", SOL: "SOL", SUI: "SUI",
   };
-  return symbols[chain?.toUpperCase()] || "主单位";
+  return symbols[chain?.toUpperCase()] || "未知币种";
 }
