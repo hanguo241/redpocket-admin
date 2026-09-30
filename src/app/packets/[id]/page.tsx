@@ -1,35 +1,44 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatAmount, nativeSymbol } from "@/lib/amount";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { fetchPacket } from "@/lib/api";
+import { fetchPacket, fetchTokens, type TokenConfig } from "@/lib/api";
 import { DataTable, StatusBadge } from "@/components";
 
 export default function PacketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [packet, setPacket] = useState<any>(null);
   const [claims, setClaims] = useState<any[]>([]);
+  const [tokens, setTokens] = useState<TokenConfig[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!id) return;
-    fetchPacket(id)
-      .then((d) => { setPacket(d.packet); setClaims(d.claims); })
+    Promise.all([fetchPacket(id), fetchTokens()])
+      .then(([d, t]) => { setPacket(d.packet); setClaims(d.claims); setTokens(t.tokens); })
       .catch((e) => setError(e.message));
   }, [id]);
 
   if (error) return <div style={{ color: "#ff5b4f" }}>{error}</div>;
   if (!packet) return <div className="text-center py-20" style={{ color: "#808080" }}>加载中...</div>;
 
+  const token = tokens.find((t) => t.chain === packet.chain &&
+    t.token_address.toLowerCase() === packet.token?.toLowerCase());
+  const isNative = packet.token === "native" || packet.token === "0x0000000000000000000000000000000000000000";
+  const decimals = token?.decimals ?? (isNative ? 18 : undefined);
+  const symbol = token?.symbol || (isNative ? nativeSymbol(packet.chain) : "未知代币");
+  const amount = (value: string) => decimals === undefined ? "代币精度未配置" : `${formatAmount(value, decimals)} ${symbol}`;
+
   const fields: [string, string | number][] = [
     ["链", packet.chain],
     ["合约地址", packet.contract],
     ["创建者", packet.creator],
     ["Token", packet.token],
-    ["总额 (wei)", (+(packet.gross_amount || packet.total_amount)).toLocaleString()],
-    ["领取池 (wei)", (+packet.total_amount).toLocaleString()],
-    ["平台费 (wei)", (+(packet.platform_fee_wei || "0")).toLocaleString()],
+    ["总额", amount(packet.gross_amount || packet.total_amount)],
+    ["领取池", amount(packet.total_amount)],
+    ["平台费", amount(packet.platform_fee_wei || "0")],
     ["状态", packet.status],
     ["人数", packet.head_count],
     ["Gas 模式", packet.claim_mode],
@@ -39,7 +48,7 @@ export default function PacketDetailPage() {
 
   const claimColumns = [
     { key: "recipient", label: "领取人", render: (v: string) => <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: "12px" }}>{v.slice(0, 10)}...</span> },
-    { key: "amount", label: "金额 (ETH)", render: (v: string) => (+v / 1e18).toFixed(6) },
+    { key: "amount", label: `金额 (${symbol})`, render: (v: string) => decimals === undefined ? "代币精度未配置" : formatAmount(v, decimals) },
     { key: "status", label: "状态", render: (v: string) => <StatusBadge status={v} /> },
     { key: "tx_hash", label: "TxHash", render: (v: string) => <span style={{ fontFamily: "var(--font-geist-mono), monospace", fontSize: "12px" }}>{(v || "—").slice(0, 12)}...</span> },
     { key: "created_at", label: "时间", render: (v: string) => <span style={{ fontSize: "12px", color: "#808080" }}>{new Date(v).toLocaleString()}</span> },
